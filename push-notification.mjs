@@ -85,16 +85,13 @@ app.post('/send-notification', (req, res) => {
 
 // Endpoint untuk memverifikasi token
 app.get('/verify-token', (req, res) => {
-  // Mengambil token dari header Authorization
-  const token = req.headers['authorization']?.split(' ')[1];  // Token berada di header 'Authorization' dengan format 'Bearer token'
-
+  const token = req.headers['authorization']?.split(' ')[1]; // Token di header 'Authorization' dengan format 'Bearer token'
   if (!token) {
     return res.status(400).json({ message: 'Token tidak ditemukan' });
   }
 
   try {
-    // Verifikasi token menggunakan JWT
-    const decoded = jwt.verify(token, vapidPrivateKey); // Gunakan private key untuk verifikasi token
+    const decoded = jwt.verify(token, vapidPrivateKey);
     res.status(200).json({ message: 'Token valid', user: decoded });
   } catch (err) {
     console.error('Token verification error:', err);

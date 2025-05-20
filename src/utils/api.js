@@ -51,20 +51,15 @@ export const login = async (email, password) => {
       body: JSON.stringify({ email, password }),
     });
 
-    // Cek apakah response berhasil (status 200)
     if (!response.ok) throw new Error(`Login gagal: ${response.statusText}`);
 
-    // Ambil data dari response, biasanya token ada dalam field 'token'
     const data = await response.json();
-
-    // Simpan token ke localStorage setelah login berhasil
     localStorage.setItem('token', data.token); // Menyimpan token
-
     console.log('Login berhasil:', data);
     return data;
   } catch (error) {
     console.error('login error:', error.message);
-    alert('Login gagal: ' + error.message);  // Menampilkan pesan error jika login gagal
+    alert('Login gagal: ' + error.message);
     throw error;
   }
 };

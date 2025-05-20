@@ -27,6 +27,9 @@ export async function subscribeUserToPush() {
 
     const subscriptionData = subscription.toJSON();
 
+    // Hapus 'expirationTime' jika ada
+    delete subscriptionData.expirationTime;
+
     const token = localStorage.getItem('token');
     if (!token) {
       throw new Error('Token tidak ditemukan. Pastikan sudah login dulu.');
