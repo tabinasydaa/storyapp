@@ -5,10 +5,11 @@ import cors from 'cors';  // Middleware untuk CORS
 import jwt from 'jsonwebtoken';  // Import jsonwebtoken untuk verifikasi token
 
 const app = express();
-const port = 3001;  // Bisa ganti port sesuai kebutuhan
+const port = 3001;  // Port yang digunakan untuk server
 
-const vapidPublicKey = 'BFkKmM0gwQevEYHp6IJyGynJVnKdvMJZByjNges0FNpW-1SlHl9vPyltmPf9VjnuGKydXAEH68xDHrqteJ1RpPo';  // Ganti dengan public key yang baru
-const vapidPrivateKey = '6yXGHwRUz4sexxIAP1gqUk2UUTUeIU70qWGtwFdSwoo';  // Ganti dengan private key yang baru
+// VAPID Public dan Private Key
+const vapidPublicKey = 'BFkKmM0gwQevEYHp6IJyGynJVnKdvMJZByjNges0FNpW-1SlHl9vPyltmPf9VjnuGKydXAEH68xDHrqteJ1RpPo';
+const vapidPrivateKey = '6yXGHwRUz4sexxIAP1gqUk2UUTUeIU70qWGtwFdSwoo';
 
 // Set VAPID details
 webPush.setVapidDetails(
@@ -21,40 +22,56 @@ webPush.setVapidDetails(
 app.use(cors());
 app.use(bodyParser.json());
 
-// Route GET untuk root "/"
+// Route untuk mengecek apakah server berjalan
 app.get('/', (req, res) => {
   res.send('Backend server is running!');
 });
 
-// Endpoint untuk menerima subscription
-app.post('/notifications/subscribe', (req, res) => {
+// Middleware untuk verifikasi token
+const verifyToken = (req, res, next) => {
+  const token = req.headers['authorization']?.split(' ')[1]; // Token di header 'Authorization'
+  if (!token) {
+    return res.status(403).json({ message: 'Token tidak ditemukan' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, vapidPrivateKey);  // Verifikasi token
+    req.user = decoded; // Simpan informasi user di request
+    next(); // Melanjutkan ke middleware berikutnya
+  } catch (err) {
+    console.error('Token verification error:', err);
+    return res.status(401).json({ message: 'Token invalid atau kedaluwarsa' });
+  }
+};
+
+// Endpoint untuk menerima subscription dari frontend
+app.post('/notifications/subscribe', verifyToken, (req, res) => {
   const subscription = req.body;
 
-  // Validasi subscription
-  if (subscription.expirationTime) {
-    delete subscription.expirationTime;
+  // Validasi subscription data
+  if (!subscription.endpoint || !subscription.keys) {
+    return res.status(400).json({ message: 'Invalid subscription data' });
   }
 
   console.log('New subscription:', subscription);
 
-  // Kirim respons
   res.status(201).json({
-    message: 'Successfully subscribed to push notification!'
+    message: 'Successfully subscribed to push notification!',
+    data: subscription,
   });
 });
 
-// Endpoint untuk mengirim push notification
-app.post('/send-notification', (req, res) => {
+// Endpoint untuk mengirim push notification ke client
+app.post('/send-notification', verifyToken, (req, res) => {
   const subscription = req.body;
 
   // Validasi data yang diterima
-  const { endpoint, p256dh, auth, title, body } = subscription;
-
+  const { endpoint, p256dh, auth } = subscription.keys;
   if (!endpoint || !p256dh || !auth) {
     return res.status(400).json({ message: 'Missing required fields (endpoint, p256dh, auth)' });
   }
 
-  // Mengonversi p256dh dan auth ke format Uint8Array yang dibutuhkan oleh web-push
+  // Membuat pushSubscription untuk dikirim menggunakan web-push
   const pushSubscription = {
     endpoint,
     keys: {
@@ -63,15 +80,16 @@ app.post('/send-notification', (req, res) => {
     }
   };
 
+  // Payload untuk push notification
   const payload = JSON.stringify({
-    title: title || 'Story Baru!',
-    body: body || 'Ada cerita baru yang bisa kamu baca!',
+    title: 'Story Baru!',
+    body: 'Ada cerita baru yang bisa kamu baca!',
   });
 
-  // Kirim push notification
+  // Mengirim push notification menggunakan web-push
   webPush.sendNotification(pushSubscription, payload)
     .then(response => {
-      console.log('Push notification sent successfully:', response);
+      console.log('Push notification sent:', response);
       res.status(200).json({ message: 'Notification sent successfully' });
     })
     .catch(error => {
@@ -83,23 +101,7 @@ app.post('/send-notification', (req, res) => {
     });
 });
 
-// Endpoint untuk memverifikasi token
-app.get('/verify-token', (req, res) => {
-  const token = req.headers['authorization']?.split(' ')[1]; // Token di header 'Authorization' dengan format 'Bearer token'
-  if (!token) {
-    return res.status(400).json({ message: 'Token tidak ditemukan' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, vapidPrivateKey);
-    res.status(200).json({ message: 'Token valid', user: decoded });
-  } catch (err) {
-    console.error('Token verification error:', err);
-    res.status(401).json({ message: 'Token invalid atau kedaluwarsa' });
-  }
-});
-
-// Jalankan server
+// Jalankan server di port 3001
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });

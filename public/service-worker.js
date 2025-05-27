@@ -6,7 +6,9 @@ const urlsToCache = [
   '/vite.svg',
   '/src/main.js',
   'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap',
-  'https://unpkg.com/leaflet/dist/leaflet.css'
+  'https://unpkg.com/leaflet/dist/leaflet.css',
+  '/icons/icon-192x192.png',  // Pastikan gambar icon ter-cache juga
+  '/icons/badge-72x72.png',   // Badge untuk notifikasi
 ];
 
 // Cache saat install
@@ -18,38 +20,42 @@ self.addEventListener('install', event => {
 
 // Intersepsi fetch
 self.addEventListener('fetch', (event) => {
-  // Jangan ganggu request ke backend lokal
+  const requestURL = new URL(event.request.url);
+
+  // Jangan intercept request untuk localhost (untuk server lokal)
   if (event.request.url.includes('localhost:3001')) return;
 
   event.respondWith(
     caches.match(event.request)
       .then((cachedResponse) => {
-        // Kalau ketemu di cache, pakai
+        // Jika ada respons cache, langsung gunakan
         if (cachedResponse) {
           console.log('Serving from cache:', event.request.url);
           return cachedResponse;
         }
 
-        // Kalau tidak ada, ambil dari network dan simpan
+        // Fetch dari jaringan jika tidak ada cache
         return fetch(event.request)
           .then((networkResponse) => {
-            // Cegah caching blob, atau respons error
+            // Jika tidak ada respons atau ada kesalahan, kembalikan respons error
             if (!networkResponse || networkResponse.status !== 200 || networkResponse.type === 'opaque') {
               return networkResponse;
             }
 
-            // Simpan ke cache hanya jika bukan dari server eksternal (untuk menghindari error CORS)
-            const requestURL = new URL(event.request.url);
+            // Clone response sebelum menggunakannya
+            const clonedResponse = networkResponse.clone();
+
+            // Identifikasi apakah URL ini adalah gambar eksternal
             const isExternalImage = requestURL.hostname !== self.location.hostname;
 
+            // Hanya cache jika gambar berasal dari server yang sama (local server)
             if (!isExternalImage) {
-              return caches.open(CACHE_NAME).then((cache) => {
-                cache.put(event.request, networkResponse.clone());
-                return networkResponse;
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, clonedResponse);
               });
             }
 
-            // Jika external, jangan cache (untuk amankan CORS)
+            // Kembalikan respons jaringan
             return networkResponse;
           })
           .catch((error) => {
@@ -62,10 +68,13 @@ self.addEventListener('fetch', (event) => {
 
 // Notifikasi push
 self.addEventListener('push', function(event) {
+  console.log('Push event received:', event);  // Debugging log
+
   event.waitUntil((async () => {
     let notificationData;
     try {
       notificationData = event.data.json();
+      console.log('Notification data:', notificationData);  // Debugging log
     } catch (e) {
       const fallbackText = await event.data.text();
       notificationData = {

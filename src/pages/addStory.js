@@ -1,4 +1,3 @@
-// src/pages/addStory.js
 import AddStoryPresenter from '../presenters/addStoryPresenter.js';  // Import Presenter
 import AddStoryModel from '../models/addStoryModel.js';  // Import Model
 
@@ -96,7 +95,7 @@ export default async function AddStoryPage() {
     }
   }
 
-  // Form submission logic
+   // Form submission logic
   const form = container.querySelector('#storyForm');
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -117,9 +116,21 @@ export default async function AddStoryPage() {
     // Call the Presenter to add the story
     await presenter.addStory(token, description, photoBlob, lat, lon);  // Call Presenter to add story
 
+    // Save the story to IndexedDB
+    await saveStoryToDb({
+      name: 'New Story',
+      description,
+      photoUrl: photoDataUrl,
+      lat,
+      lon,
+    });
+
     // Reset form after successful submission
     form.reset();
     photoPreview.innerHTML = '';  // Clear photo preview
+
+    // Menyegarkan halaman home untuk menampilkan cerita terbaru
+    window.location.hash = '/';  // Mengarahkan kembali ke halaman home setelah sukses
   });
 
   // Convert data URL to Blob

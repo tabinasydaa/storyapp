@@ -1,22 +1,39 @@
-const BASE_URL = 'https://story-api.dicoding.dev/v1';
+export const BASE_URL = 'https://story-api.dicoding.dev/v1';  
+console.log('BASE_URL in api.js:', BASE_URL);
 
 // Fungsi untuk mengambil daftar cerita
 export const getStories = async (token, page = 1, size = 10, location = 0) => {
   try {
+    if (!token) {
+      throw new Error('Token tidak ditemukan. Pastikan Anda sudah login terlebih dahulu.');
+    }
+
     const response = await fetch(`${BASE_URL}/stories?page=${page}&size=${size}&location=${location}`, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        'Authorization': `Bearer ${token}`,
       },
     });
 
-    if (!response.ok) throw new Error(`Gagal mengambil cerita: ${response.statusText}`);
-    return await response.json();
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Gagal mengambil cerita: ${errorData.message || response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    data.listStory.forEach(story => {
+      if (!story.photoUrl || story.photoUrl.includes('undefined') || !story.photoUrl.startsWith('https://')) {
+        story.photoUrl = '/images/default-image.png'; // Menetapkan fallback image jika tidak ada photoUrl yang valid
+      }
+    });
+
+    return data;
   } catch (error) {
     console.error('getStories error:', error.message);
     alert('Terjadi kesalahan saat mengambil daftar cerita: ' + error.message);
     throw error;
   }
-};
+}
 
 // Fungsi untuk menambah cerita
 export const addStory = async (token, formData) => {
@@ -31,9 +48,9 @@ export const addStory = async (token, formData) => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('addStory error:', errorData);
       throw new Error(`Gagal menambahkan cerita: ${errorData.message}`);
     }
+
     return await response.json();
   } catch (error) {
     console.error('addStory error:', error.message);
@@ -42,7 +59,7 @@ export const addStory = async (token, formData) => {
   }
 };
 
-// Fungsi login
+// Fungsi untuk login
 export const login = async (email, password) => {
   try {
     const response = await fetch(`${BASE_URL}/login`, {
@@ -51,11 +68,17 @@ export const login = async (email, password) => {
       body: JSON.stringify({ email, password }),
     });
 
-    if (!response.ok) throw new Error(`Login gagal: ${response.statusText}`);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Login gagal: ${errorData.message || response.statusText}`);
+    }
 
     const data = await response.json();
-    localStorage.setItem('token', data.token); // Menyimpan token
-    console.log('Login berhasil:', data);
+    if (data.loginResult && data.loginResult.token) {
+      localStorage.setItem('token', data.loginResult.token);
+      console.log('Login berhasil:', data);
+    }
+
     return data;
   } catch (error) {
     console.error('login error:', error.message);
@@ -75,9 +98,9 @@ export const register = async (name, email, password) => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('register error:', errorData);
       throw new Error(`Register gagal: ${errorData.message || response.statusText}`);
     }
+
     return await response.json();
   } catch (error) {
     console.error('register error:', error.message);
@@ -88,12 +111,21 @@ export const register = async (name, email, password) => {
 
 // Fungsi untuk subscribe push notification ke backend Dicoding
 export async function subscribePushNotification(subscriptionData, token) {
+  if (!token) {
+    console.error('Token tidak ditemukan');
+    alert('Anda harus login terlebih dahulu untuk menerima notifikasi');
+    return;
+  }
+
   try {
-    const response = await fetch('https://story-api.dicoding.dev/v1/notifications/subscribe', {
+    // Hapus expirationTime yang tidak diinginkan
+    delete subscriptionData.expirationTime;
+
+    const response = await fetch(`${BASE_URL}/notifications/subscribe`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${token}`, // Pastikan token dikirim dalam header
       },
       body: JSON.stringify(subscriptionData),
     });

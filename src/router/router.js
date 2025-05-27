@@ -2,12 +2,14 @@ import HomePage from '../pages/home.js';
 import LoginPage from '../pages/login.js';
 import RegisterPage from '../pages/register.js';
 import AddStoryPage from '../pages/addStory.js';
+import SaveStoryPage from '../pages/saveStory.js';  // Pastikan halaman Simpan Cerita ditambahkan
 
 const routes = {
   '/': HomePage,
   '/login': LoginPage,
   '/register': RegisterPage,
   '/add': AddStoryPage,
+  '/save': SaveStoryPage,  // Rute untuk Simpan Cerita
 };
 
 async function renderPage(hash) {

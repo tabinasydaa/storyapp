@@ -1,4 +1,4 @@
-import { subscribePushNotification } from './api';
+import { subscribePushNotification } from './api';  // Pastikan fungsi ini diimpor dengan benar
 
 const VAPID_PUBLIC_KEY = 'BFkKmM0gwQevEYHp6IJyGynJVnKdvMJZByjNges0FNpW-1SlHl9vPyltmPf9VjnuGKydXAEH68xDHrqteJ1RpPo';
 
@@ -9,9 +9,9 @@ function urlBase64ToUint8Array(base64String) {
   return new Uint8Array([...rawData].map((char) => char.charCodeAt(0)));
 }
 
+// Fungsi untuk subscribe user ke push notification
 export async function subscribeUserToPush() {
   try {
-    console.log('[Push] Menunggu service worker siap...');
     const registration = await navigator.serviceWorker.ready;
 
     const existingSubscription = await registration.pushManager.getSubscription();
@@ -20,27 +20,30 @@ export async function subscribeUserToPush() {
       await existingSubscription.unsubscribe();
     }
 
+    // Ambil token dari localStorage dan pastikan token ada
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Token tidak ditemukan. Pastikan Anda sudah login terlebih dahulu.');
+    }
+
+    // Langsung subscribe ke PushManager
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     });
 
-    const subscriptionData = subscription.toJSON();
+    let subscriptionData = subscription.toJSON();
 
-    // Hapus 'expirationTime' jika ada
+    // Hapus expirationTime dan properti lainnya yang tidak diperlukan
     delete subscriptionData.expirationTime;
+    delete subscriptionData.timestamp;
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('Token tidak ditemukan. Pastikan sudah login dulu.');
-    }
-
-    console.log('[Push] Token yang digunakan:', token);
-
+    // Kirim subscription ke server dengan Authorization header yang mengandung token
     const result = await subscribePushNotification(subscriptionData, token);
     console.log('[Push] Subscription sent to server:', result);
   } catch (error) {
     console.error('[Push] Subscription failed:', error.message);
+    alert('Gagal berlangganan push notification: ' + error.message);
     throw error;
   }
 }
