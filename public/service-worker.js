@@ -2,8 +2,7 @@ const CACHE_NAME = 'story-app-cache-v1';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/styles/style.css',
-  '/vite.svg',
+  '/styles/style.css',  // Perbaiki path di sini, hapus /public
   '/src/main.js',
   'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap',
   'https://unpkg.com/leaflet/dist/leaflet.css',

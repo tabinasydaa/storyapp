@@ -1,4 +1,3 @@
-import '../styles/style.css';
 import Navbar from './components/navbar.js';
 import renderPage from './router/router.js';
 import { subscribeUserToPush } from './utils/push.js'; // Impor fungsi subscribeUserToPush
