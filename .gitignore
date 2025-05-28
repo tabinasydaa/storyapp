@@ -7,8 +7,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Folder yang diabaikan untuk build dan dependencies
 node_modules
-dist
+dist/
 dist-ssr
 *.local
 
