@@ -9,7 +9,6 @@ lerna-debug.log*
 
 # Folder yang diabaikan untuk build dan dependencies
 node_modules
-dist/
 dist-ssr
 *.local
 
